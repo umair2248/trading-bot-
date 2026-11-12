@@ -23,6 +23,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("bot")
 TF_MINUTES = {"M1": 1, "M5": 5, "M15": 15, "M30": 30, "H1": 60, "H4": 240, "D1": 1440}
+_stale_logged = {}
 
 
 def notify(text):
@@ -53,10 +54,14 @@ def look_for_entry(symbol, last_bar_seen):
     if last_bar_seen.get(symbol) == row["time"]:
         return last_bar_seen
     # Right after (re)connecting MT5 can serve old cached bars; never trade on those.
+    # The tick can be stale too, so also compare with the PC clock (Exness server time = UTC).
     tick = mt5.symbol_info_tick(symbol)
-    bar_age = (tick.time - row["time"].timestamp()) / 60 if tick else 0
-    if bar_age > 3 * TF_MINUTES[C.ENTRY_TIMEFRAME]:
-        log.info("%s: data not synced yet (last bar %s), waiting", symbol, row["time"])
+    now = max(tick.time if tick else 0, time.time())
+    if (now - row["time"].timestamp()) / 60 > 3 * TF_MINUTES[C.ENTRY_TIMEFRAME]:
+        if _stale_logged.get(symbol) != row["time"]:
+            _stale_logged[symbol] = row["time"]
+            log.info("%s: no fresh data (last bar %s) - market closed or not synced, waiting",
+                     symbol, row["time"])
         return last_bar_seen
     last_bar_seen[symbol] = row["time"]
 
@@ -113,6 +118,9 @@ def manage(position, atr_value):
             if vol > 0 and position.volume - vol >= info.volume_min and not C.DRY_RUN:
                 if M.close_partial(position, vol):
                     notify(f"Partial close {vol} lots of #{position.ticket} {position.symbol}")
+            elif vol <= 0 or position.volume - vol < info.volume_min:
+                log.info("#%s: %.2f lots is too small to split (min %.2f) - only moving SL to break-even",
+                         position.ticket, position.volume, info.volume_min)
         if C.BREAK_EVEN_ENABLED and not C.DRY_RUN:
             fresh = mt5.positions_get(ticket=position.ticket)
             if fresh and M.modify_sl(fresh[0], fresh[0].price_open):

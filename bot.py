@@ -22,6 +22,7 @@ logging.basicConfig(
     handlers=[logging.FileHandler(C.LOG_FILE, encoding="utf-8"), logging.StreamHandler(sys.stdout)],
 )
 log = logging.getLogger("bot")
+TF_MINUTES = {"M1": 1, "M5": 5, "M15": 15, "M30": 30, "H1": 60, "H4": 240, "D1": 1440}
 
 
 def notify(text):
@@ -51,6 +52,12 @@ def look_for_entry(symbol, last_bar_seen):
     row = m.iloc[-1]
     if last_bar_seen.get(symbol) == row["time"]:
         return last_bar_seen
+    # Right after (re)connecting MT5 can serve old cached bars; never trade on those.
+    tick = mt5.symbol_info_tick(symbol)
+    bar_age = (tick.time - row["time"].timestamp()) / 60 if tick else 0
+    if bar_age > 3 * TF_MINUTES[C.ENTRY_TIMEFRAME]:
+        log.info("%s: data not synced yet (last bar %s), waiting", symbol, row["time"])
+        return last_bar_seen
     last_bar_seen[symbol] = row["time"]
 
     trend = int(h["trend"].iloc[-1])
@@ -62,7 +69,7 @@ def look_for_entry(symbol, last_bar_seen):
     if M.my_positions(symbol):
         log.info("%s: already have a position, skip", symbol)
         return last_bar_seen
-    for check in (risk.account_ok, lambda: risk.market_ok(symbol)):
+    for check in (risk.account_ok, lambda: risk.market_ok(symbol, C.SL_ATR_MULTIPLIER * row["atr"])):
         ok, why = check()
         if not ok:
             log.info("%s %s blocked: %s", symbol, side, why)

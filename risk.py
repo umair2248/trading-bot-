@@ -1,6 +1,7 @@
 """Position sizing and account-protection rules. Any rule failing => no new trades."""
 import json
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 
 import MetaTrader5 as mt5
@@ -101,16 +102,31 @@ def account_ok():
     return True, ""
 
 
-def market_ok(symbol):
+CRYPTO = {"BTC", "ETH", "SOL", "XRP", "BNB", "LTC", "DOGE", "ADA", "BCH", "DOT", "LINK",
+          "MATIC", "AVAX", "UNI", "AAVE", "XTZ", "FIL", "TRX", "TON"}
+
+
+def is_crypto(symbol):
+    return mt5.symbol_info(symbol).currency_base.upper() in CRYPTO
+
+
+def market_ok(symbol, sl_distance):
+    """sl_distance is in price units; the spread must be a small fraction of it."""
     now = datetime.now(timezone.utc)
-    if now.weekday() == 4 and now.hour >= C.FRIDAY_CUTOFF_HOUR_UTC:
-        return False, "Friday cutoff (weekend gap risk)"
-    if now.weekday() >= 5:
-        return False, "weekend"
     info = mt5.symbol_info(symbol)
-    limit = C.MAX_SPREAD_XAUUSD if symbol.upper().startswith("XAU") else C.MAX_SPREAD_POINTS
-    if info.spread > limit:
-        return False, f"spread {info.spread} > {limit:.0f} points"
+    tick = mt5.symbol_info_tick(symbol)
+    if info.trade_mode != mt5.SYMBOL_TRADE_MODE_FULL:
+        return False, "trading disabled for this symbol"
+    if tick is None or time.time() - tick.time > C.MAX_TICK_AGE_SEC:
+        return False, "market closed (no fresh price)"
+    if not is_crypto(symbol):  # crypto trades 24/7 with no weekend gap
+        if now.weekday() == 4 and now.hour >= C.FRIDAY_CUTOFF_HOUR_UTC:
+            return False, "Friday cutoff (weekend gap risk)"
+        if now.weekday() >= 5:
+            return False, "weekend"
+    spread = tick.ask - tick.bid
+    if sl_distance <= 0 or spread / sl_distance * 100 > C.MAX_SPREAD_PCT_OF_SL:
+        return False, f"spread {spread:.{info.digits}f} > {C.MAX_SPREAD_PCT_OF_SL:.0f}% of SL distance"
     if C.NEWS_FILTER_ENABLED:
         ev = upcoming_news(symbol)
         if ev:

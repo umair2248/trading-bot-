@@ -77,8 +77,10 @@ PARTIAL_CLOSE_ENABLED = _b("PARTIAL_CLOSE_ENABLED", True)
 PARTIAL_CLOSE_PCT = _f("PARTIAL_CLOSE_PCT", 50.0)
 
 # Filters
-MAX_SPREAD_POINTS = _f("MAX_SPREAD_POINTS", 30)
-MAX_SPREAD_XAUUSD = _f("MAX_SPREAD_XAUUSD", 50)
+# Spread must be at most this % of the stop-loss distance (works for every asset class).
+MAX_SPREAD_PCT_OF_SL = _f("MAX_SPREAD_PCT_OF_SL", 10)
+# A symbol whose last price is older than this is treated as closed (stocks/indices off-hours).
+MAX_TICK_AGE_SEC = _i("MAX_TICK_AGE_SEC", 300)
 FRIDAY_CUTOFF_HOUR_UTC = _i("FRIDAY_CUTOFF_HOUR_UTC", 20)
 NEWS_FILTER_ENABLED = _b("NEWS_FILTER_ENABLED", True)
 NEWS_BUFFER_MINUTES = _i("NEWS_BUFFER_MINUTES", 30)

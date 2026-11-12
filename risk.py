@@ -28,7 +28,7 @@ def lot_size(symbol, sl_distance):
 
 def _closed_deals(since):
     deals = mt5.history_deals_get(since, datetime.now() + timedelta(days=1)) or []
-    return [d for d in deals if d.magic == C.MAGIC_NUMBER
+    return [d for d in deals if d.magic in (C.MAGIC_NUMBER, C.MAGIC_NUMBER + 1)  # EMA + London
             and d.entry in (mt5.DEAL_ENTRY_OUT, mt5.DEAL_ENTRY_OUT_BY)]
 
 
@@ -88,7 +88,7 @@ def account_ok():
     if acc.margin > 0 and acc.margin_level < C.MIN_MARGIN_LEVEL_PCT:
         return False, f"margin level {acc.margin_level:.0f}% too low"
 
-    positions = M.my_positions()
+    positions = M.my_positions() + M.my_positions(magic=C.MAGIC_NUMBER + 1)
     if len(positions) >= C.MAX_OPEN_TRADES:
         return False, f"{len(positions)} trades already open"
 

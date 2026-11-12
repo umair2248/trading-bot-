@@ -1,0 +1,13 @@
+strategy,trades,per_month,win%,PF,PF_in,PF_out,R,R/month,ret%@1%,maxDD%,PASS
+"London breakout (SL mid, 2R)",437,14.4,42,1.15,1.16,1.14,37.4,1.23,39.8,24.0,True
+"London breakout (SL mid, 2R) +half@1R",437,14.4,54,1.16,1.09,1.29,32.4,1.07,35.0,10.7,False
+"London breakout (SL range, 1R)",437,14.4,54,1.13,1.13,1.14,21.0,0.69,21.5,18.8,True
+"London breakout (SL range, 1R) +half@1R",437,14.4,54,1.13,1.13,1.14,21.0,0.69,21.5,18.8,True
+NY opening-range breakout + EMA,321,10.6,48,1.03,1.01,1.05,1.5,0.05,1.1,5.6,False
+NY opening-range breakout + EMA +half@1R,321,10.6,48,0.98,0.99,0.97,-0.9,-0.03,-1.2,5.6,False
+Asian range fake-out fade,392,12.9,15,0.72,0.65,0.83,-102.8,-3.38,-68.5,74.3,False
+Asian range fake-out fade +half@1R,392,12.9,40,0.6,0.56,0.66,-107.5,-3.54,-67.4,71.7,False
+Donchian 20 breakout (H1),2058,14.1,35,1.11,1.02,1.25,113.0,0.77,145.1,41.7,False
+Donchian 20 breakout (H1) +half@1R,2105,14.4,44,1.01,0.96,1.1,10.6,0.07,-1.7,58.8,False
+RSI(2) pullback (H1),2743,18.9,50,0.91,0.88,0.96,-112.7,-0.78,-71.2,76.5,False
+RSI(2) pullback (H1) +half@1R,2744,18.9,50,0.91,0.88,0.97,-109.0,-0.75,-70.1,76.4,False

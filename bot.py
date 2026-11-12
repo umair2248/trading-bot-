@@ -11,6 +11,7 @@ import MetaTrader5 as mt5
 import requests
 
 import config as C
+import london
 import mt5_client as M
 import risk
 import strategy as S
@@ -127,7 +128,7 @@ def manage(position, atr_value):
                 notify(f"#{position.ticket} {position.symbol} SL moved to break-even")
         return
 
-    if secured and C.TRAILING_STOP_ENABLED and not C.DRY_RUN:
+    if secured and C.TRAILING_STOP_ENABLED and not C.DRY_RUN and position.magic != london.MAGIC:
         new_sl = price - d * C.TRAILING_STOP_ATR_MULTIPLIER * atr_value
         min_gap = max(info.trade_stops_level, 1) * info.point
         if (new_sl - position.sl) * d > 10 * info.point and abs(price - new_sl) >= min_gap:
@@ -146,6 +147,7 @@ def main():
         sys.exit("Algo Trading is OFF in MT5. Click the 'Algo Trading' button in the terminal toolbar.")
 
     notify(f"Bot started | {C.STRATEGY_NAME} | {', '.join(C.SYMBOLS)} | "
+           f"{'+ LONDON_BO | ' if C.LONDON_BREAKOUT_ENABLED else ''}"
            f"{'DRY RUN (no real orders)' if C.DRY_RUN else 'LIVE ORDERS'} | risk {C.RISK_PER_TRADE_PCT}%/trade")
     seen = {}
     try:
@@ -156,7 +158,9 @@ def main():
             for symbol in C.SYMBOLS:
                 try:
                     seen = look_for_entry(symbol, seen)
-                    positions = M.my_positions(symbol)
+                    if C.LONDON_BREAKOUT_ENABLED:
+                        london.step(symbol, notify)
+                    positions = M.my_positions(symbol) + M.my_positions(symbol, london.MAGIC)
                     if positions:
                         _, m = closed_bars(symbol)
                         for p in positions:

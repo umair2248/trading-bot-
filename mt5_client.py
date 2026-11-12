@@ -71,9 +71,39 @@ def round_volume(symbol, volume):
     return round(vol, 8) if vol >= info.volume_min else 0.0
 
 
-def my_positions(symbol=None):
+def my_positions(symbol=None, magic=None):
     pos = mt5.positions_get(symbol=symbol) if symbol else mt5.positions_get()
-    return [p for p in (pos or []) if p.magic == C.MAGIC_NUMBER]
+    return [p for p in (pos or []) if p.magic == (magic or C.MAGIC_NUMBER)]
+
+
+def my_orders(symbol, magic):
+    return [o for o in (mt5.orders_get(symbol=symbol) or []) if o.magic == magic]
+
+
+def place_stop(symbol, side, volume, price, sl, tp, magic, comment):
+    digits = mt5.symbol_info(symbol).digits
+    req = {
+        "action": mt5.TRADE_ACTION_PENDING,
+        "symbol": symbol,
+        "volume": volume,
+        "type": mt5.ORDER_TYPE_BUY_STOP if side == "BUY" else mt5.ORDER_TYPE_SELL_STOP,
+        "price": round(price, digits),
+        "sl": round(sl, digits),
+        "tp": round(tp, digits),
+        "magic": magic,
+        "comment": comment[:31],
+        "type_time": mt5.ORDER_TIME_GTC,
+        "type_filling": mt5.ORDER_FILLING_RETURN,
+    }
+    return _send(req)
+
+
+def cancel_order(order):
+    return _send({"action": mt5.TRADE_ACTION_REMOVE, "order": order.ticket})
+
+
+def close_position(position):
+    return close_partial(position, position.volume)
 
 
 def open_market(symbol, side, volume, sl, tp, comment):
@@ -104,7 +134,7 @@ def modify_sl(position, new_sl):
         "position": position.ticket,
         "sl": round(new_sl, digits),
         "tp": position.tp,
-        "magic": C.MAGIC_NUMBER,
+        "magic": position.magic,
     }
     return _send(req)
 
@@ -120,7 +150,7 @@ def close_partial(position, volume):
         "type": mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY,
         "price": tick.bid if is_buy else tick.ask,
         "deviation": 20,
-        "magic": C.MAGIC_NUMBER,
+        "magic": position.magic,
         "comment": "partial",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": filling_mode(position.symbol),

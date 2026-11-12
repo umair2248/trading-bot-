@@ -1,0 +1,10 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Runtime
+logs/
+state.json
+__pycache__/
+*.pyc
